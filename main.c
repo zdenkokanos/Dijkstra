@@ -145,6 +145,7 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
 
 int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
 {
+    // Initialization
     for (int i = 0; i < N; i++)
     {
         graph[i]->current_weight = MAX_WEIGHT;
@@ -154,49 +155,50 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
 
     graph[starting_vertex]->current_weight = 0;
 
-    NEIGHBOURS *current = graph[starting_vertex]->neighbours;
-    if (current == NULL)
-    {
-        return 1; //ak nemá žiadne hrany
-    }
-
     int visitedCount = 0;
 
     while (visitedCount != N)
     {
-        int smallest_index = MAX_WEIGHT;
+        int smallest_weight = MAX_WEIGHT;
+        int smallest_index = -1;
         for (int i = 0; i < N; i++)
         {
-            if (graph[i]->current_weight < smallest_index && graph[i]->visited == false)
+            if (graph[i]->current_weight < smallest_weight && !graph[i]->visited)
             {
+                smallest_weight = graph[i]->current_weight;
                 smallest_index = i;
-                graph[i]->visited = true;
-                break;
             }
         }
-        current = graph[smallest_index]->neighbours;
+        if (smallest_index == -1)
+        {
+            return 1;
+        }
+        graph[smallest_index]->visited = true;
+        visitedCount++;
+
+        NEIGHBOURS *current = graph[smallest_index]->neighbours;
         while (current != NULL)
         {
-            if (graph[current->index]->visited == false)
+            if (!graph[current->index]->visited)
             {
-                int newWeight = graph[smallest_index]->current_weight + current->weight;
-                if (graph[current->index]->current_weight > newWeight)
+                int new_weight = graph[smallest_index]->current_weight + current->weight;
+                if (new_weight < graph[current->index]->current_weight)
                 {
-                    graph[current->index]->current_weight = newWeight;
+                    graph[current->index]->current_weight = new_weight;
                     graph[current->index]->best_index = smallest_index;
                 }
             }
             current = current->next;
         }
-        visitedCount++;
     }
-    VERTEX *starting = NULL;
+
+    VERTEX *starting = graph[end_point];
     int route[N];
     for (int i = 0; i < N; i++)
     {
         route[i] = -1;
     }
-    int i = 1;
+    int i = 0;
     int index = end_point;
     int totalWeight = 0;
     while (starting != graph[starting_vertex])
@@ -207,16 +209,10 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
         i++;
     }
     printf("\n%d: [", totalWeight);
-    for (int i = 0; route[i] != -1; i++)
+    for (int j = i - 1; j >= 0; j--)
     {
-        if (i != 0)
-        {
-            printf(",%d", route[i]);
-        }
-        else
-        {
-            printf("%d", route[i]);
-        }
+        printf("%d", route[j]);
+        if (j > 0) printf(", ");
     }
     printf("]");
 
