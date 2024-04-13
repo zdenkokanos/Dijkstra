@@ -27,14 +27,63 @@ void print(VERTEX **graph, int vertex)
     NEIGHBOURS *current = graph[vertex]->neighbours;
     while (current != NULL)
     {
-        printf("%d,", current->index);
+        printf("%d: [weight: %d],", current->index, current->weight);
         current = current->next;
     }
     printf("]\n");
 }
 
-void add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one)
+int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
 {
+    if (vertex1 > N - 1 || vertex2 > N - 1)
+    {
+        return 1;
+    }
+    NEIGHBOURS *current = graph[vertex1]->neighbours;
+    while (current != NULL)
+    {
+        if (current->index == vertex2)
+        {
+            break;
+        }
+        current = current->next;
+    }
+    if (current == NULL)
+    {
+        return 1;
+    }
+    int newWeight = current->weight + weight;
+    if (newWeight < 0)
+    {
+        return 1;
+    }
+    else
+    {
+        current->weight = newWeight;
+    }
+
+    if (first_one == true)
+    {
+        update(graph, vertex2, vertex1, weight, false, N);
+    }
+    return 0;
+}
+
+int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
+{
+    if (vertex1 > N - 1 || vertex2 > N - 1)
+    {
+        return 1;
+    }
+    NEIGHBOURS *current = graph[vertex1]->neighbours;
+    while (current != NULL)
+    {
+        if (current->index == vertex2)
+        {
+            return 1;
+        }
+        current = current->next;
+    }
     NEIGHBOURS *neighbour = (NEIGHBOURS *) malloc(sizeof(NEIGHBOURS));
     neighbour->index = vertex2;
     neighbour->weight = weight;
@@ -54,8 +103,9 @@ void add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_o
     }
     if (first_one == true)
     {
-        add_edge(graph, vertex2, vertex1, weight, false);
+        add_edge(graph, vertex2, vertex1, weight, false, N);
     }
+    return 0;
 }
 
 
@@ -89,49 +139,16 @@ void dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
                 min_weight = graph[i]->current_weight;
             }
         }
-
-        // If no minimum weight vertex is found, break
-        if (min_index == -1)
-            break;
-
-        // Mark the selected vertex as visited
-        graph[min_index]->visited = true;
-
-        // Update distances to its neighbors
-        NEIGHBOURS *current = graph[min_index]->neighbours;
-        while (current != NULL)
-        {
-            int neighbor_index = current->index;
-            int neighbor_weight = current->weight;
-            if (!graph[neighbor_index]->visited &&
-                graph[min_index]->current_weight + neighbor_weight < graph[neighbor_index]->current_weight)
-            {
-                graph[neighbor_index]->current_weight = graph[min_index]->current_weight + neighbor_weight;
-            }
-            current = current->next;
-        }
-
-        // Store the visited vertex
-        visited_vertices[visited_count++] = min_index;
     }
-
-    // Print shortest distance to end point
-    printf("Shortest distance from %d to %d is %d\n", starting_vertex, end_point, graph[end_point]->current_weight);
-
-    // Print visited vertices
-    printf("Visited vertices: ");
-    for (int i = 0; i < visited_count; i++)
-    {
-        printf("%d ", visited_vertices[i]);
-    }
-    printf("\n");
 }
+
 
 int main()
 {
     int N, M;
     int vertex1, vertex2, weight;
     char input;
+    char printed = false;
     scanf("%d %d", &N, &M);
     VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
     for (int i = 0; i < N; i++)
@@ -145,7 +162,18 @@ int main()
     for (int i = 0; i < M; i++)
     {
         scanf(" (%d, %d, %d)", &vertex1, &vertex2, &weight);
-        add_edge(graph, vertex1, vertex2, weight, true);
+        if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
+        {
+            if (printed == false)
+            {
+                printf("insert %d %d failed", vertex1, vertex2);
+                printed = true;
+            }
+            else
+            {
+                printf("\ninsert %d %d failed", vertex1, vertex2);
+            }
+        }
     }
     while (scanf("%c", &input) == 1)
     {
@@ -156,13 +184,38 @@ int main()
                 dijkstra(graph, vertex1, vertex2, N);
                 break;
             case 'd':
+                scanf(" %d %d", &vertex1, &vertex2);
 
                 break;
             case 'i':
-
+                scanf("%d %d %d", &vertex1, &vertex2, &weight);
+                if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
+                {
+                    if (printed == false)
+                    {
+                        printf("insert %d %d failed", vertex1, vertex2);
+                        printed = true;
+                    }
+                    else
+                    {
+                        printf("\ninsert %d %d failed", vertex1, vertex2);
+                    }
+                }
                 break;
             case 'u':
-
+                scanf("%d %d %d", &vertex1, &vertex2, &weight);
+                if (update(graph, vertex1, vertex2, weight, true, N) == 1)
+                {
+                    if (printed == false)
+                    {
+                        printf("update %d %d failed", vertex1, vertex2);
+                        printed = true;
+                    }
+                    else
+                    {
+                        printf("\nupdate %d %d failed", vertex1, vertex2);
+                    }
+                }
                 break;
             case 'p':
                 scanf("%d", &vertex1);
