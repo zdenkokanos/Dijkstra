@@ -3,7 +3,7 @@
 
 #define true 't'
 #define false 'f'
-#define MAX_WEIGHT 999999;
+#define MAX_WEIGHT 999999
 typedef char bool;
 
 typedef struct neighbour
@@ -69,6 +69,40 @@ int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one,
     return 0;
 }
 
+int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one)
+{
+    NEIGHBOURS *current = graph[vertex1]->neighbours;
+    NEIGHBOURS *previous = NULL;
+    while (current != NULL)
+    {
+        if (current->index == vertex2)
+        {
+            break;
+        }
+        previous = current;
+        current = current->next;
+    }
+    if (current == NULL)
+    {
+        return 1;
+    }
+    if (current == graph[vertex1]->neighbours)
+    {
+        graph[vertex1]->neighbours = current->next;
+        free(current);
+    }
+    else
+    {
+        previous->next = current->next;
+        free(current);
+    }
+    if (first_one == true)
+    {
+        delete(graph, vertex2, vertex1, false);
+    }
+    return 0;
+}
+
 int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
@@ -109,37 +143,84 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
 }
 
 
-void dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
+int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
 {
-    // Initialize distances and visited array
     for (int i = 0; i < N; i++)
     {
         graph[i]->current_weight = MAX_WEIGHT;
         graph[i]->visited = false;
+        graph[i]->best_index = -1;
     }
 
-    // Set the distance of the starting vertex to 0
     graph[starting_vertex]->current_weight = 0;
 
-    // Array to store visited vertices
-    int visited_vertices[N];
-    int visited_count = 0;
-
-    // Main loop for Dijkstra's algorithm
-    for (int count = 0; count < N - 1; count++)
+    NEIGHBOURS *current = graph[starting_vertex]->neighbours;
+    if (current == NULL)
     {
-        // Find the vertex with the minimum current_weight among unvisited vertices
-        int min_index = -1;
-        int min_weight = MAX_WEIGHT;
+        return 1; //ak nemá žiadne hrany
+    }
+
+    int visitedCount = 0;
+
+    while (visitedCount != N)
+    {
+        int smallest_index = MAX_WEIGHT;
         for (int i = 0; i < N; i++)
         {
-            if (graph[i]->visited == false && graph[i]->current_weight < min_weight)
+            if (graph[i]->current_weight < smallest_index && graph[i]->visited == false)
             {
-                min_index = i;
-                min_weight = graph[i]->current_weight;
+                smallest_index = i;
+                graph[i]->visited = true;
+                break;
             }
         }
+        current = graph[smallest_index]->neighbours;
+        while (current != NULL)
+        {
+            if (graph[current->index]->visited == false)
+            {
+                int newWeight = graph[smallest_index]->current_weight + current->weight;
+                if (graph[current->index]->current_weight > newWeight)
+                {
+                    graph[current->index]->current_weight = newWeight;
+                    graph[current->index]->best_index = smallest_index;
+                }
+            }
+            current = current->next;
+        }
+        visitedCount++;
     }
+    VERTEX *starting = NULL;
+    int route[N];
+    for (int i = 0; i < N; i++)
+    {
+        route[i] = -1;
+    }
+    int i = 1;
+    int index = end_point;
+    int totalWeight = 0;
+    while (starting != graph[starting_vertex])
+    {
+        route[i] = graph[index]->best_index;
+        totalWeight += graph[index]->current_weight;
+        starting = graph[graph[index]->best_index];
+        i++;
+    }
+    printf("\n%d: [", totalWeight);
+    for (int i = 0; route[i] != -1; i++)
+    {
+        if (i != 0)
+        {
+            printf(",%d", route[i]);
+        }
+        else
+        {
+            printf("%d", route[i]);
+        }
+    }
+    printf("]");
+
+    return 0;
 }
 
 
@@ -181,11 +262,33 @@ int main()
         {
             case 's':
                 scanf(" %d %d", &vertex1, &vertex2);
-                dijkstra(graph, vertex1, vertex2, N);
+                if (dijkstra(graph, vertex1, vertex2, N) == 1)
+                {
+                    if (printed == false)
+                    {
+                        printf("search %d %d failed", vertex1, vertex2);
+                        printed = true;
+                    }
+                    else
+                    {
+                        printf("\nsearch %d %d failed", vertex1, vertex2);
+                    }
+                }
                 break;
             case 'd':
                 scanf(" %d %d", &vertex1, &vertex2);
-
+                if (delete(graph, vertex1, vertex2, true) == 1)
+                {
+                    if (printed == false)
+                    {
+                        printf("delete %d %d failed", vertex1, vertex2);
+                        printed = true;
+                    }
+                    else
+                    {
+                        printf("\ndelete %d %d failed", vertex1, vertex2);
+                    }
+                }
                 break;
             case 'i':
                 scanf("%d %d %d", &vertex1, &vertex2, &weight);
