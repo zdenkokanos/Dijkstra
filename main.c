@@ -143,79 +143,92 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
 }
 
 
-int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N)
+int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed)
 {
-    // Initialization
+    int distances[N];
+    int predecessors[N];
+    bool visited[N];
+
     for (int i = 0; i < N; i++)
     {
-        graph[i]->current_weight = MAX_WEIGHT;
-        graph[i]->visited = false;
-        graph[i]->best_index = -1;
+        distances[i] = MAX_WEIGHT;
+        predecessors[i] = -1;
+        visited[i] = false;
     }
 
-    graph[starting_vertex]->current_weight = 0;
+    distances[starting_vertex] = 0;
 
-    int visitedCount = 0;
-
-    while (visitedCount != N)
+    while (1)
     {
-        int smallest_weight = MAX_WEIGHT;
-        int smallest_index = -1;
-        for (int i = 0; i < N; i++)
+        int min_distance = MAX_WEIGHT;
+        int min_index = -1;
+
+        for (int v = 0; v < N; v++)
         {
-            if (graph[i]->current_weight < smallest_weight && !graph[i]->visited)
+            if (visited[v] == false && distances[v] < min_distance)
             {
-                smallest_weight = graph[i]->current_weight;
-                smallest_index = i;
+                min_distance = distances[v];
+                min_index = v;
             }
         }
-        if (smallest_index == -1)
-        {
-            return 1;
-        }
-        graph[smallest_index]->visited = true;
-        visitedCount++;
 
-        NEIGHBOURS *current = graph[smallest_index]->neighbours;
-        while (current != NULL)
+        if (min_index == -1)
         {
-            if (!graph[current->index]->visited)
+            break;
+        }
+
+        visited[min_index] = true;
+
+        NEIGHBOURS *neighbour = graph[min_index]->neighbours;
+        while (neighbour != NULL)
+        {
+            int neighbour_index = neighbour->index;
+            int weight = neighbour->weight;
+
+            if (distances[min_index] != MAX_WEIGHT && distances[min_index] + weight < distances[neighbour_index])
             {
-                int new_weight = graph[smallest_index]->current_weight + current->weight;
-                if (new_weight < graph[current->index]->current_weight)
-                {
-                    graph[current->index]->current_weight = new_weight;
-                    graph[current->index]->best_index = smallest_index;
-                }
+                distances[neighbour_index] = distances[min_index] + weight;
+                predecessors[neighbour_index] = min_index;
             }
-            current = current->next;
+
+            neighbour = neighbour->next;
         }
     }
 
-    VERTEX *starting = graph[end_point];
-    int route[N];
-    for (int i = 0; i < N; i++)
+    int path[N];
+    int path_length = 0;
+    int current_vertex = end_point;
+
+    while (current_vertex != starting_vertex)
     {
-        route[i] = -1;
+        path[path_length++] = current_vertex;
+        current_vertex = predecessors[current_vertex];
+        if (current_vertex == -1)
+        {
+            printf("No path found.");
+            return 1; // No path found
+        }
     }
-    int i = 0;
-    int index = end_point;
-    int totalWeight = 0;
-    while (starting != graph[starting_vertex])
+    path[path_length++] = starting_vertex;
+
+    if (*printed == false)
     {
-        route[i] = graph[index]->best_index;
-        totalWeight += graph[index]->current_weight;
-        starting = graph[graph[index]->best_index];
-        i++;
+        printf("%d: [", distances[end_point]);
+        *printed = true;
     }
-    printf("\n%d: [", totalWeight);
-    for (int j = i - 1; j >= 0; j--)
+    else
     {
-        printf("%d", route[j]);
-        if (j > 0) printf(", ");
+        printf("\n%d: [", distances[end_point]);
+    }
+    for (int i = path_length - 1; i >= 0; i--)
+    {
+        printf("%d", path[i]);
+        if (i > 0)
+        {
+            printf(", ");
+        }
     }
     printf("]");
-
     return 0;
 }
 
@@ -225,7 +238,7 @@ int main()
     int N, M;
     int vertex1, vertex2, weight;
     char input;
-    char printed = false;
+    bool printed = false;
     scanf("%d %d", &N, &M);
     VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
     for (int i = 0; i < N; i++)
@@ -258,7 +271,7 @@ int main()
         {
             case 's':
                 scanf(" %d %d", &vertex1, &vertex2);
-                if (dijkstra(graph, vertex1, vertex2, N) == 1)
+                if (dijkstra(graph, vertex1, vertex2, N, &printed) == 1)
                 {
                     if (printed == false)
                     {
