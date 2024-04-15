@@ -18,6 +18,19 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
+typedef struct node
+{
+    int vertex;
+    int distance;
+} NODE;
+
+typedef struct
+{
+    NODE **heap;
+    int size;
+    int capacity;
+} PRIORITY_QUEUE;
+
 void print(VERTEX **graph, int vertex)
 {
     printf("Vertex %d: [", vertex);
@@ -28,6 +41,92 @@ void print(VERTEX **graph, int vertex)
         current = current->next;
     }
     printf("]\n");
+}
+
+void priorityQueueInit(PRIORITY_QUEUE *priorityQueue, int N)
+{
+    priorityQueue->size = 0;
+    priorityQueue->capacity = N;
+    priorityQueue->heap = (NODE **) malloc(N * sizeof(NODE *));
+}
+
+void remakeQueue(PRIORITY_QUEUE *priorityQueue, int N)
+{
+    for (int i = 0; i < N; i++)
+    {
+        if (priorityQueue->heap[i] != NULL)
+        {
+            //free(priorityQueue->heap[i]);
+            priorityQueue->heap[i] = NULL;
+        }
+    }
+    free(priorityQueue->heap);
+    priorityQueue->heap = NULL;
+    priorityQueue->size = 0;
+    priorityQueue->heap = (NODE **) malloc(N * sizeof(NODE *));
+}
+
+void swap(NODE **a, NODE **b)
+{
+    NODE *temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+void addNode(PRIORITY_QUEUE *priorityQueue, int vertex, int distance)
+{
+    int i = priorityQueue->size++;
+    priorityQueue->heap[i] = (NODE *) malloc(sizeof(NODE));
+    priorityQueue->heap[i]->vertex = vertex;
+    priorityQueue->heap[i]->distance = distance;
+    while (i > 0 && priorityQueue->heap[i]->distance < priorityQueue->heap[(i - 1) / 2]->distance)
+    {
+        swap(&priorityQueue->heap[i], &priorityQueue->heap[(i - 1) / 2]);
+        i = (i - 1) / 2;
+    }
+}
+
+NODE *getMin(PRIORITY_QUEUE *priorityQueue)
+{
+    if (priorityQueue->size == 0)
+    {
+        return NULL;
+    }
+
+    NODE *minNode = priorityQueue->heap[0];
+    priorityQueue->heap[0] = priorityQueue->heap[--priorityQueue->size];
+
+    int i = 0;
+    while (1)
+    {
+        int leftChild = 2 * i + 1;
+        int rightChild = 2 * i + 2;
+        int smallest = i;
+
+        if (leftChild < priorityQueue->size &&
+            priorityQueue->heap[leftChild]->distance < priorityQueue->heap[smallest]->distance)
+        {
+            smallest = leftChild;
+        }
+
+        if (rightChild < priorityQueue->size &&
+            priorityQueue->heap[rightChild]->distance < priorityQueue->heap[smallest]->distance)
+        {
+            smallest = rightChild;
+        }
+
+        if (smallest != i)
+        {
+            swap(&priorityQueue->heap[i], &priorityQueue->heap[smallest]);
+            i = smallest;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return minNode;
 }
 
 int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
@@ -139,12 +238,13 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
     return 0;
 }
 
-
-int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed)
+int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed, PRIORITY_QUEUE *priorityQueue)
 {
     int distances[N];
     int predecessors[N];
     bool visited[N];
+
+    remakeQueue(priorityQueue, N);
 
     for (int i = 0; i < N; i++)
     {
@@ -154,25 +254,13 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
     }
 
     distances[starting_vertex] = 0;
+    addNode(priorityQueue, starting_vertex, 0);
 
-    while (1)
+    while (priorityQueue->size > 0)
     {
-        int min_distance = MAX_WEIGHT;
-        int min_index = -1;
-
-        for (int vertex = 0; vertex < N; vertex++)
-        {
-            if (visited[vertex] == false && distances[vertex] < min_distance && distances[vertex] < distances[end_point])
-            {
-                min_distance = distances[vertex];
-                min_index = vertex;
-            }
-        }
-
-        if (min_index == -1)
-        {
-            break;
-        }
+        NODE *minNode = getMin(priorityQueue);
+        int min_index = minNode->vertex;
+        free(minNode);
 
         visited[min_index] = true;
 
@@ -182,10 +270,12 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
             int neighbour_index = neighbour->index;
             int weight = neighbour->weight;
 
-            if (distances[min_index] != MAX_WEIGHT && distances[min_index] + weight < distances[neighbour_index])
+            if (visited[neighbour_index] == false && distances[min_index] != MAX_WEIGHT &&
+                distances[min_index] + weight < distances[neighbour_index])
             {
                 distances[neighbour_index] = distances[min_index] + weight;
                 predecessors[neighbour_index] = min_index;
+                addNode(priorityQueue, neighbour_index, distances[neighbour_index]);
             }
 
             neighbour = neighbour->next;
@@ -216,6 +306,7 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
     {
         printf("\n%d: [", distances[end_point]);
     }
+
     for (int i = path_length - 1; i >= 0; i--)
     {
         printf("%d", path[i]);
@@ -228,7 +319,6 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
     return 0;
 }
 
-
 int main()
 {
     int N, M;
@@ -237,6 +327,8 @@ int main()
     bool printed = false;
     scanf("%d %d", &N, &M);
     VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
+    PRIORITY_QUEUE *priorityQueue = (PRIORITY_QUEUE *) malloc(sizeof(PRIORITY_QUEUE));
+    priorityQueueInit(priorityQueue, N);
     for (int i = 0; i < N; i++)
     {
         VERTEX *newVertex = (VERTEX *) malloc(sizeof(VERTEX));
@@ -265,7 +357,7 @@ int main()
         {
             case 's':
                 scanf(" %d %d", &vertex1, &vertex2);
-                if (dijkstra(graph, vertex1, vertex2, N, &printed) == 1)
+                if (dijkstra(graph, vertex1, vertex2, N, &printed, priorityQueue) == 1)
                 {
                     if (printed == false)
                     {
