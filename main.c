@@ -163,15 +163,33 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
         int min_distance = MAX_WEIGHT;
         int min_index = -1;
 
-        for (int v = 0; v < N; v++)
+        for (int vertex = 0; vertex < N; vertex++)
         {
-            if (visited[v] == false && distances[v] < min_distance)
+            if (visited[vertex] == false && distances[vertex] < min_distance)
             {
-                min_distance = distances[v];
-                min_index = v;
+                min_distance = distances[vertex];
+                min_index = vertex;
             }
         }
 
+        bool all_visited = false;
+        if (visited[end_point] == true)
+        {
+            NEIGHBOURS *end_neighbour = graph[end_point]->neighbours;
+            while (end_neighbour != NULL)
+            {
+                if (visited[end_neighbour->index] != true)
+                {
+                    break;
+                }
+                end_neighbour = end_neighbour->next;
+            }
+            all_visited = true;
+        }
+        if (all_visited == true)
+        {
+            break;
+        }
         if (min_index == -1)
         {
             break;
@@ -205,7 +223,6 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
         current_vertex = predecessors[current_vertex];
         if (current_vertex == -1)
         {
-            printf("No path found.");
             return 1; // No path found
         }
     }
@@ -300,7 +317,7 @@ int main()
                 }
                 break;
             case 'i':
-                scanf("%d %d %d", &vertex1, &vertex2, &weight);
+                scanf(" %d %d %d", &vertex1, &vertex2, &weight);
                 if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
                 {
                     if (printed == false)
@@ -315,7 +332,7 @@ int main()
                 }
                 break;
             case 'u':
-                scanf("%d %d %d", &vertex1, &vertex2, &weight);
+                scanf(" %d %d %d", &vertex1, &vertex2, &weight);
                 if (update(graph, vertex1, vertex2, weight, true, N) == 1)
                 {
                     if (printed == false)
@@ -330,7 +347,7 @@ int main()
                 }
                 break;
             case 'p':
-                scanf("%d", &vertex1);
+                scanf(" %d", &vertex1);
                 print(graph, vertex1);
                 break;
             default:
