@@ -18,18 +18,6 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
-void print(VERTEX **graph, int vertex)
-{
-    printf("Vertex %d: [", vertex);
-    NEIGHBOURS *current = graph[vertex]->neighbours;
-    while (current != NULL)
-    {
-        printf("%d: [weight: %d],", current->index, current->weight);
-        current = current->next;
-    }
-    printf("]\n");
-}
-
 int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
@@ -322,10 +310,6 @@ int main()
                         printf("\nupdate %d %d failed", vertex1, vertex2);
                     }
                 }
-                break;
-            case 'p':
-                scanf(" %d", &vertex1);
-                print(graph, vertex1);
                 break;
             default:
                 break;
