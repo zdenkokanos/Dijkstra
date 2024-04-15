@@ -15,9 +15,6 @@ typedef struct neighbour
 
 typedef struct vertex
 {
-    bool visited;
-    int current_weight;
-    int best_index;
     NEIGHBOURS *neighbours;
 } VERTEX;
 
@@ -165,31 +162,13 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
 
         for (int vertex = 0; vertex < N; vertex++)
         {
-            if (visited[vertex] == false && distances[vertex] < min_distance)
+            if (visited[vertex] == false && distances[vertex] < min_distance && distances[vertex] < distances[end_point])
             {
                 min_distance = distances[vertex];
                 min_index = vertex;
             }
         }
 
-        bool all_visited = false;
-        if (visited[end_point] == true)
-        {
-            NEIGHBOURS *end_neighbour = graph[end_point]->neighbours;
-            while (end_neighbour != NULL)
-            {
-                if (visited[end_neighbour->index] != true)
-                {
-                    break;
-                }
-                end_neighbour = end_neighbour->next;
-            }
-            all_visited = true;
-        }
-        if (all_visited == true)
-        {
-            break;
-        }
         if (min_index == -1)
         {
             break;
@@ -261,9 +240,7 @@ int main()
     for (int i = 0; i < N; i++)
     {
         VERTEX *newVertex = (VERTEX *) malloc(sizeof(VERTEX));
-        newVertex->visited = false;
         newVertex->neighbours = NULL;
-        newVertex->current_weight = MAX_WEIGHT;
         graph[i] = newVertex;
     }
     for (int i = 0; i < M; i++)
