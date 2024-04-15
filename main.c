@@ -18,6 +18,20 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
+typedef struct heap
+{
+    int index;
+    int weight;
+    struct heap *left;
+    struct heap *right;
+} HEAP;
+
+typedef struct priority_queue
+{
+    HEAP *root;
+} PRIORITY_QUEUE;
+
+
 void print(VERTEX **graph, int vertex)
 {
     printf("Vertex %d: [", vertex);
@@ -139,8 +153,120 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
     return 0;
 }
 
+void heapify(HEAP *root)
+{
+    if (root == NULL)
+    {
+        return;
+    }
 
-int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed)
+    HEAP *smallest = root;
+    HEAP *left = root->left;
+    HEAP *right = root->right;
+
+    if (left != NULL && left->weight < smallest->weight)
+    {
+        smallest = left;
+    }
+
+    if (right != NULL && right->weight < smallest->weight)
+    {
+        smallest = right;
+    }
+
+    if (smallest != root)
+    {
+        int temp_weight = root->weight;
+        int temp_index = root->index;
+        root->weight = smallest->weight;
+        root->index = smallest->index;
+        smallest->weight = temp_weight;
+        smallest->index = temp_index;
+        heapify(smallest);
+    }
+}
+
+
+void add_to_heap(HEAP **root, int index, int weight)
+{
+    HEAP *newNode = (HEAP *) malloc(sizeof(HEAP));
+    newNode->index = index;
+    newNode->weight = weight;
+    newNode->left = NULL;
+    newNode->right = NULL;
+
+    if (*root == NULL)
+    {
+        *root = newNode;
+        return;
+    }
+    HEAP *current = *root;
+    while (1)
+    {
+        if (weight < current->weight)
+        {
+            if (current->left == NULL)
+            {
+                current->left = newNode;
+                break;
+            }
+            else
+            {
+                current = current->left;
+            }
+        }
+        else
+        {
+            if (current->right == NULL)
+            {
+                current->right = newNode;
+                break;
+            }
+            else
+            {
+                current = current->right;
+            }
+        }
+    }
+
+    heapify(*root);
+}
+
+void delete_min(HEAP **root)
+{
+    if (*root == NULL)
+    {
+        return;
+    }
+
+    HEAP *current = *root;
+    while (current->left != NULL || current->right != NULL)
+    {
+        if (current->right != NULL && current->left->weight > current->right->weight)
+        {
+            current = current->right;
+        }
+        else
+        {
+            current = current->left;
+        }
+    }
+
+    int temp_weight = current->weight;
+    int temp_index = current->index;
+    current->weight = (*root)->weight;
+    current->index = (*root)->index;
+    (*root)->weight = temp_weight;
+    (*root)->index = temp_index;
+
+    free(current);
+    current = NULL;
+
+    heapify(*root);
+}
+
+
+int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed, PRIORITY_QUEUE *priorityQueue)
 {
     int distances[N];
     int predecessors[N];
@@ -154,22 +280,14 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
     }
 
     distances[starting_vertex] = 0;
-
-    while (1)
+    add_to_heap(&(priorityQueue->root), starting_vertex, 0);
+    while (priorityQueue->root != NULL)
     {
-        int min_distance = MAX_WEIGHT;
-        int min_index = -1;
+        int min_index = priorityQueue->root->index;
+        int min_distance = priorityQueue->root->weight;
+        delete_min(&(priorityQueue->root));
 
-        for (int vertex = 0; vertex < N; vertex++)
-        {
-            if (visited[vertex] == false && distances[vertex] < min_distance && distances[vertex] < distances[end_point])
-            {
-                min_distance = distances[vertex];
-                min_index = vertex;
-            }
-        }
-
-        if (min_index == -1)
+        if (min_index == end_point) //nie som si istý
         {
             break;
         }
@@ -182,16 +300,17 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
             int neighbour_index = neighbour->index;
             int weight = neighbour->weight;
 
-            if (distances[min_index] != MAX_WEIGHT && distances[min_index] + weight < distances[neighbour_index])
+            if (visited[neighbour_index] == false && distances[min_index] != MAX_WEIGHT &&
+                distances[min_index] + weight < distances[neighbour_index])
             {
                 distances[neighbour_index] = distances[min_index] + weight;
                 predecessors[neighbour_index] = min_index;
+                add_to_heap(&(priorityQueue->root), neighbour_index, distances[neighbour_index]);
             }
 
             neighbour = neighbour->next;
         }
     }
-
     int path[N];
     int path_length = 0;
     int current_vertex = end_point;
@@ -237,12 +356,15 @@ int main()
     bool printed = false;
     scanf("%d %d", &N, &M);
     VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
+    PRIORITY_QUEUE *priorityQueue = (PRIORITY_QUEUE *) malloc(sizeof(priorityQueue));
+    priorityQueue->root = NULL;
     for (int i = 0; i < N; i++)
     {
         VERTEX *newVertex = (VERTEX *) malloc(sizeof(VERTEX));
         newVertex->neighbours = NULL;
         graph[i] = newVertex;
     }
+
     for (int i = 0; i < M; i++)
     {
         scanf(" (%d, %d, %d)", &vertex1, &vertex2, &weight);
@@ -265,7 +387,7 @@ int main()
         {
             case 's':
                 scanf(" %d %d", &vertex1, &vertex2);
-                if (dijkstra(graph, vertex1, vertex2, N, &printed) == 1)
+                if (dijkstra(graph, vertex1, vertex2, N, &printed, priorityQueue) == 1)
                 {
                     if (printed == false)
                     {
