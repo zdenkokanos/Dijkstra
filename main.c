@@ -18,7 +18,7 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
-typedef struct node
+typedef struct pq_e
 {
     int index;
     int weight;
@@ -33,8 +33,8 @@ typedef struct pq
 PQ *create_priorityQueue(int capacity)
 {
     PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
+    priorityQueue->heap = (PQ_E *) malloc(2 * capacity * sizeof(PQ_E));
     priorityQueue->size = 0;
-    priorityQueue->heap = (PQ_E *) malloc(capacity * sizeof(PQ_E));
     return priorityQueue;
 }
 
@@ -95,12 +95,6 @@ void insert(PQ *priorityQueue, int index, int weight)
 
 PQ_E extract_min(PQ *priorityQueue)
 {
-    if (priorityQueue->size <= 0) {
-        PQ_E empty;
-        empty.index = -1;
-        empty.weight = -1;
-        return empty;
-    }
     PQ_E min = priorityQueue->heap[0];
     priorityQueue->heap[0] = priorityQueue->heap[priorityQueue->size - 1];
     priorityQueue->size--;
@@ -214,7 +208,7 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
     }
     else
     {
-        NEIGHBOURS *current = graph[vertex1]->neighbours;
+        current = graph[vertex1]->neighbours;
         while (current->next != NULL)
         {
             current = current->next;
@@ -252,11 +246,6 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
         int min_index = min.index;
         visited[min_index] = true;
 
-        if (min_index == end_point) //??
-        {
-            break;
-        }
-
         NEIGHBOURS *neighbour = graph[min_index]->neighbours;
         while (neighbour != NULL)
         {
@@ -274,7 +263,7 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
             neighbour = neighbour->next;
         }
     }
-
+    destroy_priorityQueue(priorityQueue);
     int path[N];
     int path_length = 0;
     int current_vertex = end_point;
@@ -308,7 +297,6 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
         }
     }
     printf("]");
-    destroy_priorityQueue(priorityQueue);
     return 0;
 }
 
