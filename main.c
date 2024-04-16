@@ -18,6 +18,101 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
+typedef struct node
+{
+    int index;
+    int weight;
+} PQ_E;
+
+typedef struct pq
+{
+    PQ_E *heap;
+    int capacity;
+    int size;
+} PQ;
+
+void swap(PQ_E *a, PQ_E *b)
+{
+    PQ_E temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+void heapify_up(PQ *priority_queue, int index)
+{
+    if (index <= 0)
+    { return; }
+
+    int parent = (index - 1) / 2;
+    if (priority_queue->heap[parent].weight > priority_queue->heap[index].weight)
+    {
+        swap(&priority_queue->heap[parent], &priority_queue->heap[index]);
+        heapify_up(priority_queue, parent);
+    }
+}
+
+void heapify_down(PQ *priority_queue, int index)
+{
+    int left_child = 2 * index + 1;
+    int right_child = 2 * index + 2;
+    int smallest = index;
+
+    if (left_child < priority_queue->size &&
+        priority_queue->heap[left_child].weight < priority_queue->heap[smallest].weight)
+    {
+        smallest = left_child;
+    }
+
+    if (right_child < priority_queue->size &&
+        priority_queue->heap[right_child].weight < priority_queue->heap[smallest].weight)
+    {
+        smallest = right_child;
+    }
+
+    if (smallest != index)
+    {
+        swap(&priority_queue->heap[index], &priority_queue->heap[smallest]);
+        heapify_down(priority_queue, smallest);
+    }
+}
+
+void insert(PQ *priority_queue, int index, int weight)
+{
+    priority_queue->heap[priority_queue->size].index = index;
+    priority_queue->heap[priority_queue->size].weight = weight;
+    priority_queue->size++;
+    heapify_up(priority_queue, priority_queue->size - 1);
+}
+
+PQ_E extract_min(PQ *priority_queue)
+{
+    if (priority_queue->size <= 0)
+    {
+        printf("Priority queue underflow\n");
+        PQ_E empty;
+        empty.index = -1;
+        empty.weight = -1;
+        return empty;
+    }
+
+    PQ_E min = priority_queue->heap[0];
+    priority_queue->heap[0] = priority_queue->heap[priority_queue->size - 1];
+    priority_queue->size--;
+    heapify_down(priority_queue, 0);
+    return min;
+}
+
+int is_empty(PQ *priority_queue)
+{
+    return priority_queue->size == 0;
+}
+
+void destroy_priority_queue(PQ *priority_queue)
+{
+    free(priority_queue->heap);
+    free(priority_queue);
+}
+
 int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
@@ -128,11 +223,12 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
 }
 
 
-int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed)
+int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed, PQ *priorityQueue)
 {
     int distances[N];
     int predecessors[N];
     bool visited[N];
+
 
     for (int i = 0; i < N; i++)
     {
@@ -150,7 +246,8 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
 
         for (int vertex = 0; vertex < N; vertex++)
         {
-            if (visited[vertex] == false && distances[vertex] < min_distance && distances[vertex] < distances[end_point])
+            if (visited[vertex] == false && distances[vertex] < min_distance &&
+                distances[vertex] < distances[end_point])
             {
                 min_distance = distances[vertex];
                 min_index = vertex;
@@ -225,6 +322,10 @@ int main()
     bool printed = false;
     scanf("%d %d", &N, &M);
     VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
+    PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
+    priorityQueue->capacity = N;
+    priorityQueue->size = 0;
+    priorityQueue->heap = (PQ_E *) malloc(N * sizeof(PQ_E));
     for (int i = 0; i < N; i++)
     {
         VERTEX *newVertex = (VERTEX *) malloc(sizeof(VERTEX));
@@ -253,7 +354,7 @@ int main()
         {
             case 's':
                 scanf(" %d %d", &vertex1, &vertex2);
-                if (dijkstra(graph, vertex1, vertex2, N, &printed) == 1)
+                if (dijkstra(graph, vertex1, vertex2, N, &printed, priorityQueue) == 1)
                 {
                     if (printed == false)
                     {
