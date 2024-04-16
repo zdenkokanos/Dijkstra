@@ -18,6 +18,12 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
+typedef struct heap
+{
+    int index;
+    int weight;
+} HEAP;
+
 int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
@@ -127,34 +133,126 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_on
     return 0;
 }
 
+int right(int index)
+{
+    return (2 * index + 2);
+}
+
+int left(int index)
+{
+    return (2 * index + 1);
+}
+
+
+void heapify(HEAP heap[], int size, int index)
+{
+    if (size == 1)
+    {
+        return;
+    }
+    else
+    {
+        int smallest = index;
+        int left_child = left(index);
+        int right_child = right(index);
+        if (left_child < size && heap[left_child].weight < heap[smallest].weight)
+        {
+            smallest = left_child;
+        }
+        if (right_child < size && heap[right_child].weight < heap[smallest].weight)
+        {
+            smallest = right_child;
+        }
+        if (smallest != index)
+        {
+            HEAP temp = heap[index];
+            heap[index] = heap[smallest];
+            heap[smallest] = temp;
+            heapify(heap, size, smallest);
+        }
+    }
+}
+
+void add_to_heap(HEAP heap[], int newIndex, int weight, int *size)
+{
+    if (size == 0)
+    {
+        heap[0].index = newIndex;
+        heap[0].weight = weight;
+        (*size)++;
+    }
+    else
+    {
+        heap[*size].index = newIndex;
+        heap[*size].weight = weight;
+        (*size)++;
+        for (int i = (*size) / 2 - 1; i >= 0; i--)
+        {
+            heapify(heap, *size, i);
+        }
+    }
+}
+
+
+void remove_from_heap(HEAP heap[], int *size)
+{
+    HEAP temp =  heap[0];
+    heap[0] = heap[(*size) -1];
+    heap[(*size)-1] = temp;
+    (*size)--;
+    for (int i = (*size) / 2 - 1; i >= 0; i--)
+    {
+        heapify(heap, *size, i);
+    }
+}
+
+void find_and_update(HEAP heap[], int index, int weight, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (heap[i].index == index)
+        {
+            heap[i].weight = weight;
+            return;
+        }
+    }
+    for (int i = size / 2 - 1; i >= 0; i--)
+    {
+        heapify(heap, size, i);
+    }
+}
 
 int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *printed)
 {
     int distances[N];
     int predecessors[N];
     bool visited[N];
+    HEAP heap[N];
+    bool isInHeap[N];
 
     for (int i = 0; i < N; i++)
     {
         distances[i] = MAX_WEIGHT;
         predecessors[i] = -1;
         visited[i] = false;
+        heap[i].index = -1;
+        heap[i].weight = MAX_WEIGHT;
+        isInHeap[i] = false;
     }
 
     distances[starting_vertex] = 0;
+    heap[0].index = starting_vertex;
+    heap[0].weight = 0;
+    int size = 1;
 
     while (1)
     {
-        int min_distance = MAX_WEIGHT;
         int min_index = -1;
-
-        for (int vertex = 0; vertex < N; vertex++)
+        int h_index = heap[0].index;
+        if (visited[h_index] == false && distances[h_index] < distances[end_point])
         {
-            if (visited[vertex] == false && distances[vertex] < min_distance && distances[vertex] < distances[end_point])
-            {
-                min_distance = distances[vertex];
-                min_index = vertex;
-            }
+            min_index = h_index;
+            remove_from_heap(heap, &size);
         }
 
         if (min_index == -1)
@@ -174,8 +272,16 @@ int dijkstra(VERTEX **graph, int starting_vertex, int end_point, int N, bool *pr
             {
                 distances[neighbour_index] = distances[min_index] + weight;
                 predecessors[neighbour_index] = min_index;
+                if (isInHeap[neighbour_index] == false)
+                {
+                    add_to_heap(heap, neighbour_index, distances[neighbour_index], &size);
+                    isInHeap[neighbour_index] = true;
+                }
+                else
+                {
+                    find_and_update(heap, neighbour_index, weight, size);
+                }
             }
-
             neighbour = neighbour->next;
         }
     }
